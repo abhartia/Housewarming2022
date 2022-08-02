@@ -29,13 +29,13 @@ namespace Housewarming2022
             LifxAppToken = configurationRoot["LifxAppToken"];
             SpotifyClientID = configurationRoot["SpotifyClientID"];
             SpotifySecret = configurationRoot["SpotifySecret"];
-            
+
             //spotify client id: f5f7da86cb004ce6bf9c3f4ff4f1ac92
             // spotify secret: bc81c5c4e6cb4fc3ae95750419cbff56
             bool activated = false;
             //while (true)
             //{
-            //    if (DateTime.Now.Hour == 17 && DateTime.Now.Minute == 3)
+            //    if (DateTime.Now.Hour == 18 && DateTime.Now.Minute == 0)
             //    {
             activated = true;
             //}
