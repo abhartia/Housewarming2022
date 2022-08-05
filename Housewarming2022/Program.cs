@@ -373,8 +373,8 @@ namespace Housewarming2022
             new Task(() =>
             {
                 Thread.Sleep(timeoffset + 9333923);
-                    //Cyber sex (but would like pinker)
-                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                    //Cyber sex
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Pink").uuid, new SetStateRequest()
                 {
                     Duration = 5,
                     Fast = true
@@ -681,8 +681,8 @@ namespace Housewarming2022
             new Task(() =>
             {
                 Thread.Sleep(timeoffset + 18087461);
-                    //Dance the way i feel and Funkytown (but would like pinker)
-                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                    //Dance the way i feel and Funkytown
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Pink").uuid, new SetStateRequest()
                 {
                     Duration = 5,
                     Fast = true
