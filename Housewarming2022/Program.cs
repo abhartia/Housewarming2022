@@ -120,7 +120,7 @@ namespace Housewarming2022
             List<LifxCloudClient.SceneResponse> scenes = await client.ListScenes();
 
             //Time offset in case all transitions need to be brought forward/sent backward
-            int timeoffset = -500;
+            int timeoffset = -3000;
 
             new Task(() =>
             {
