@@ -120,7 +120,7 @@ namespace Housewarming2022
             List<LifxCloudClient.SceneResponse> scenes = await client.ListScenes();
 
             //Time offset in case all transitions need to be brought forward/sent backward
-            int timeoffset = 0;
+            int timeoffset = -500;
 
             new Task(() =>
             {
@@ -196,7 +196,7 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(timeoffset + 4164868);
+                Thread.Sleep(timeoffset + 4437262);
                     //Lady - Hear My Tonight
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Warming").uuid, new SetStateRequest()
                 {
@@ -405,7 +405,7 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(timeoffset + 9868482);
+                Thread.Sleep(timeoffset + 10181302);
                     //Save Your Tears
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
                 {
@@ -515,7 +515,7 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(timeoffset + 12830327);
+                Thread.Sleep(timeoffset + 13129267);
                     //I think i like you
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
                 {
