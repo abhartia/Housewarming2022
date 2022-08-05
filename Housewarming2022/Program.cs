@@ -30,27 +30,23 @@ namespace Housewarming2022
             SpotifyClientID = configurationRoot["SpotifyClientID"];
             SpotifySecret = configurationRoot["SpotifySecret"];
 
-            //spotify client id: f5f7da86cb004ce6bf9c3f4ff4f1ac92
-            // spotify secret: bc81c5c4e6cb4fc3ae95750419cbff56
             bool activated = false;
-            //while (true)
-            //{
-            //    if (DateTime.Now.Hour == 18 && DateTime.Now.Minute == 0)
-            //    {
-            activated = true;
-            //}
-            if (activated)
+            while (true)
             {
-
-                // Make sure "http://localhost:5000/callback" is in your spotify application as redirect uri!
-                _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
-                await _server.Start();
-
-                _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-
-                var request = new LoginRequest(_server.BaseUri, "f5f7da86cb004ce6bf9c3f4ff4f1ac92", LoginRequest.ResponseType.Code)
+                if (DateTime.Now.Hour == 18 && DateTime.Now.Minute == 0)
                 {
-                    Scope = new List<string> {
+                    activated = true;
+                }
+                if (activated)
+                {
+                    _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+                    await _server.Start();
+
+                    _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+
+                    var request = new LoginRequest(_server.BaseUri, SpotifyClientID, LoginRequest.ResponseType.Code)
+                    {
+                        Scope = new List<string> {
                             Scopes.UgcImageUpload,
                             Scopes.UserReadRecentlyPlayed ,
                             Scopes.UserReadPlaybackPosition,
@@ -71,14 +67,14 @@ namespace Housewarming2022
                             Scopes.PlaylistReadCollaborative ,
                             Scopes.UserFollowModify
                         }
-                };
-                var uri = request.ToUri();
-                BrowserUtil.Open(uri);
+                    };
+                    var uri = request.ToUri();
+                    BrowserUtil.Open(uri);
 
-                Thread.Sleep(99930000);
+                    Thread.Sleep(99930000);
+                }
+                Thread.Sleep(60000);
             }
-            Thread.Sleep(60000);
-            //}
         }
 
         private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
@@ -123,18 +119,21 @@ namespace Housewarming2022
             //ACTUAL PLAYLIST BELOW
             List<LifxCloudClient.SceneResponse> scenes = await client.ListScenes();
 
+            //Time offset in case all transitions need to be brought forward/sent backward
+            int timeoffset = 0;
+
             new Task(() =>
             {
-                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022-1").uuid, new SetStateRequest()
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Start").uuid, new SetStateRequest()
                 {
-                    Duration = 5,
+                    Duration = 1,
                     Fast = true
                 });
             }).Start();
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
+                Thread.Sleep(timeoffset + 2311329);
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Green & Gold").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -144,7 +143,7 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
+                Thread.Sleep(timeoffset + 2589529);
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Dream").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -154,7 +153,7 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
+                Thread.Sleep(timeoffset + 3168062);
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Warming").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -164,8 +163,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Why'd You Only Call Me When You're High
+                Thread.Sleep(timeoffset + 3765945);
+                    //Why'd You Only Call Me When You're High
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Dream").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -175,8 +174,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Borderline
+                Thread.Sleep(timeoffset + 3927068);
+                    //Borderline
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Warming").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -186,8 +185,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Do I Wanna Know?
+                Thread.Sleep(timeoffset + 4164868);
+                    //Do I Wanna Know?
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Dream").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -197,8 +196,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Lady - Hear My Tonight
+                Thread.Sleep(timeoffset + 4164868);
+                    //Lady - Hear My Tonight
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Warming").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -208,8 +207,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Arabella
+                Thread.Sleep(timeoffset + 4744415);
+                    //Arabella
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Dream").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -219,8 +218,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Genghis Khan
+                Thread.Sleep(timeoffset + 4951771);
+                    //Genghis Khan
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Warming").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -230,8 +229,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Strange Effect
+                Thread.Sleep(timeoffset + 5163917);
+                    //Strange Effect
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Dream").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -241,8 +240,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(10000);
-                //Red Lights Part 1
+                Thread.Sleep(timeoffset + 5365378);
+                    //Red Lights Part 1
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Early Warming").uuid, new SetStateRequest()
                 {
                     Duration = 5,
@@ -252,7 +251,8 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(20000);
+                Thread.Sleep(timeoffset + 5365378 + 60500);
+                    //Drop happens 60.5 seconds into the song
                 client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Red Lights").uuid, new SetStateRequest()
                 {
                     Duration = 1,
@@ -262,36 +262,454 @@ namespace Housewarming2022
 
             new Task(() =>
             {
-                Thread.Sleep(30000);
-                //Where You Belong and Best I Ever Had
-                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022-4").uuid, new SetStateRequest()
+                Thread.Sleep(timeoffset + 5574832);
+                    //Where You Belong and Best I Ever Had
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
                 {
-                    Duration = 1,
+                    Duration = 5,
                     Fast = true
                 });
             }).Start();
 
             new Task(() =>
             {
-                Thread.Sleep(40000);
-                //Blinding Lights
-                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022-5").uuid, new SetStateRequest()
+                Thread.Sleep(timeoffset + 6039559);
+                    //Blinding Lights, Starboy
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
                 {
-                    Duration = 1,
+                    Duration = 5,
                     Fast = true
                 });
             }).Start();
 
             new Task(() =>
             {
-                Thread.Sleep(50000);
-                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022-6").uuid, new SetStateRequest()
+                Thread.Sleep(timeoffset + 6470052);
+                    //Lose Yourself to Dance, No diggity
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
                 {
-                    Duration = 1,
+                    Duration = 5,
                     Fast = true
                 });
             }).Start();
 
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 7128545);
+                    //DNA
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 7314491);
+                    //Still D.R.E.
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Green").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 7585077);
+                    //Backstreet Freestyle
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 7797730);
+                    //Money
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 7981257);
+                    //Nice For What and Black Parade
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 8473275);
+                    //Vegas
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 8656181);
+                    //Bad guy and goosebumps and risky business
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 9333923);
+                    //Cyber sex (but would like pinker)
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 9499656);
+                    //Woman and Humble
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 9868482);
+                    //Sicko mode
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 9868482);
+                    //Save Your Tears
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 10372315);
+                    //Don't Start Now + Tonight
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 10782418);
+                    //Close Eyes
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 10914764);
+                    //Animal Rights
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Green").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 11072009);
+                    //Four to the floor and can't Feel My Face
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 11779914);
+                    //Wild Thoughts
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 11984087);
+                    //See You Again and Jubel
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 12381806);
+                    //As It Was
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 12549109);
+                    //Cold/mess only
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cold Mess").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 12830327);
+                    //Passionfruit
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 12830327);
+                    //I think i like you
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 13311925);
+                    //Make Them Wheels Roll and On My Mind and Pretty Great
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 13959912);
+                    //Late Night Talking
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 14137866);
+                    //Gorgeous and freaky deaky
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 14562827);
+                    //Little L
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 14858227);
+                    //Catch 22
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 15079644);
+                    //Rock DJ and Toxic
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 15537004);
+                    //California Gurls
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 15771657);
+                    //Shake it off and gold digger
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 16198483);
+                    //Downtown and hollaback girl and don't phunk with my heart
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 16930702);
+                    //Turn Down for What
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 17144435);
+                    //The Real Slim Shady
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 17428635);
+                    //Hey Ya!
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 17663848);
+                    //Are You Gonna Be My Girl
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 17877648);
+                    //Unbelievable
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 18087461);
+                    //Dance the way i feel and Funkytown (but would like pinker)
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Warm").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 18534380);
+                    //A Thousand Miles
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Cool").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
+
+            new Task(() =>
+            {
+                Thread.Sleep(timeoffset + 18724985);
+                    //Rolling in the Deep, Wolfie Nothing Breaks Like a Heart and Feel No Ways but would like darker
+                client.ActivateScene(scenes.First(s => s.name == "Housewarming 2022 - Dark").uuid, new SetStateRequest()
+                {
+                    Duration = 5,
+                    Fast = true
+                });
+            }).Start();
         }
     }
 }
