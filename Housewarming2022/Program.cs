@@ -100,7 +100,7 @@ namespace Housewarming2022
 
             SpotifyClient spotify = new SpotifyClient(tokenResponse.AccessToken);
             DeviceResponse devices = await spotify.Player.GetAvailableDevices();
-            Paging<SimplePlaylist> playlists = await spotify.Playlists.CurrentUsers();
+            Paging<FullPlaylist> playlists = await spotify.Playlists.CurrentUsers();
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -135,42 +135,66 @@ namespace Housewarming2022
 
         static async void SyncLights(LifxCloudClient lifxClient, SpotifyClient spotify)
         {
-            Dictionary<string, Bitmap> imageLibrary = new Dictionary<string, Bitmap>();
-            CurrentlyPlaying currentTrack = null;
+            Dictionary<string, List<Color>> tops = new Dictionary<string, List<Color>>();
+            Dictionary<string, List<Color>> bottoms = new Dictionary<string, List<Color>>();
+            CurrentlyPlaying runningTrack = null;
 
             while (true)
             {
                 //Get current track
-                currentTrack = await spotify.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(PlayerCurrentlyPlayingRequest.AdditionalTypes.Track));
+                CurrentlyPlaying currentTrack = await spotify.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(PlayerCurrentlyPlayingRequest.AdditionalTypes.Track));
+                if (runningTrack != null && (runningTrack.Item as FullTrack).Id == (currentTrack.Item as FullTrack).Id)
+                {
+                    Thread.Sleep(1000);
+                    continue;
+                }
+                runningTrack = currentTrack;
+
+                var artist = await spotify.Artists.Get((runningTrack.Item as FullTrack).Artists.First().Id);
 
                 //Get album art
-                string albumArtURL = (currentTrack.Item as FullTrack).Album.Images.First().Url;
+                string imageURL = (runningTrack.Item as FullTrack).Album.Images.First().Url;
 
                 //Get album art bitmap
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                if (!imageLibrary.ContainsKey(albumArtURL))
+                if (!tops.ContainsKey(imageURL))
                 {
-                    imageLibrary.Add(albumArtURL, new Bitmap(await GetBitmapFromUrlAsync(albumArtURL), new Size(200, 200)));
+                    Bitmap albumArt = new Bitmap(await GetBitmapFromUrlAsync(imageURL), new Size(200, 200));
+
+                    Console.WriteLine("Album art retrieved in ms: " + sw.ElapsedMilliseconds);
+
+                    // Lounge and TV strip lights should be based on top half of album art
+                    Console.WriteLine("Top :");
+                    List<Color> topColours = GetTopPrimaryColours(albumArt);
+                    tops.Add(imageURL, topColours);
+
+                    // Kitchen, bench strip and dining room lights should be based on bottom half of album art
+                    Console.WriteLine("Bottom :");
+                    var bottomColours = GetBottomPrimaryColours(albumArt);
+                    bottoms.Add(imageURL, bottomColours);
                 }
-                Bitmap albumArt = imageLibrary[albumArtURL];
-
-                Console.WriteLine("Album art retrieved in ms: " + sw.ElapsedMilliseconds);
-                var color = GetPrimaryColor(albumArt);
-
-                Thread.Sleep(1000);
             }
-            return;
         }
 
-        public static Color GetPrimaryColor(Bitmap bitmap)
+        public static List<Color> GetTopPrimaryColours(Bitmap bitmap)
+        {
+            return GetPrimaryColours(bitmap, true);
+        }
+
+        public static List<Color> GetBottomPrimaryColours(Bitmap bitmap)
+        {
+            return GetPrimaryColours(bitmap, false);
+        }
+
+        private static List<Color> GetPrimaryColours(Bitmap bitmap, bool top)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
             // Lock the bitmap's bits
-            BitmapData bmpData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height / 2), ImageLockMode.ReadOnly, bitmap.PixelFormat);
+            BitmapData bmpData = bitmap.LockBits(new Rectangle(0, top ? 0 : bitmap.Height / 2, bitmap.Width, bitmap.Height / 2), ImageLockMode.ReadOnly, bitmap.PixelFormat);
 
             int bytesPerPixel = System.Drawing.Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
             int byteCount = bmpData.Stride * (bitmap.Height / 2);
@@ -183,7 +207,7 @@ namespace Housewarming2022
             bitmap.UnlockBits(bmpData);
 
             // Prepare the data for k-means
-            double[][] pixelData = new double[(bitmap.Width * bitmap.Height) / 2][];
+            double[][] pixelData = new double[bitmap.Width * bitmap.Height / 2][];
             int index = 0;
             for (int y = 0; y < bitmap.Height / 2; y++)
             {
@@ -199,13 +223,13 @@ namespace Housewarming2022
             }
 
             // Apply k-means clustering
-            KMeans kmeans = new KMeans(6);
+            KMeans kmeans = new KMeans(10);
             KMeansClusterCollection clusters = kmeans.Learn(pixelData);
 
-            // Find the most vibrant cluster centroid
-            double maxVibrancy = 0;
-            double[] mostVibrantColor = clusters.OrderBy(s => s.Centroid.First()).Last().Centroid;
-            foreach (var cluster in clusters)
+            // Create a list to store colors and their vibrancy
+            List<Tuple<Color, double>> vibrantColors = new List<Tuple<Color, double>>();
+
+            foreach (var cluster in clusters.Where(s => s.Proportion > 0.045))
             {
                 var color = Color.FromArgb(
                     (int)(cluster.Centroid[0] * 255),
@@ -215,33 +239,27 @@ namespace Housewarming2022
 
                 double vibrancy = CalculateVibrancy(color);
 
-                if (vibrancy > maxVibrancy && cluster.Proportion > 0.05)
-                {
-                    maxVibrancy = vibrancy;
-                    mostVibrantColor = cluster.Centroid;
-                }
+                // Add the color and its vibrancy to the list
+                vibrantColors.Add(Tuple.Create(color, vibrancy));
             }
 
-            // Convert the most vibrant color to RGB values
-            int rValue = (int)(mostVibrantColor[0] * 255);
-            int gValue = (int)(mostVibrantColor[1] * 255);
-            int bValue = (int)(mostVibrantColor[2] * 255);
+            // Sort the colors by vibrancy in descending order
+            vibrantColors = vibrantColors.OrderByDescending(c => c.Item2).ToList();
 
-            foreach (var cluster in clusters)
+            // Take the top 6 most vibrant colors
+            List<Color> topVibrantColors = vibrantColors.Take(8).Select(c => c.Item1).ToList();
+
+            foreach (var color in topVibrantColors)
             {
-                Console.Write("Cluster " + cluster.Index + ": ");
-                PrintColorSquare(Color.FromArgb((int)(cluster.Centroid[0] * 255), (int)(cluster.Centroid[1] * 255), (int)(cluster.Centroid[2] * 255)));
+                PrintColorSquare(color);
                 Console.WriteLine();
             }
-            Console.WriteLine();
-            Console.WriteLine("Most prominent: ");
-            PrintColorSquare(Color.FromArgb(rValue, gValue, bValue));
-            Console.WriteLine();
+
             Console.WriteLine("Found in ms: " + sw.ElapsedMilliseconds);
             Console.WriteLine();
 
-            // Return the primary color as a Color object
-            return Color.FromArgb(rValue, gValue, bValue);
+            // Return the top 6 most vibrant colors
+            return topVibrantColors;
         }
 
         public static double CalculateVibrancy(Color color)
