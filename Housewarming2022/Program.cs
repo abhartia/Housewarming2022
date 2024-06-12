@@ -102,19 +102,14 @@ namespace Housewarming2022
             DeviceResponse devices = await spotify.Player.GetAvailableDevices();
             Paging<FullPlaylist> playlists = await spotify.Playlists.CurrentUsers();
 
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
             //spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest()
             //{
             //    DeviceId = devices.Devices.First(s => s.Name == "BHUPENDRAJOGI").Id, //BHUPENDRAJOGI or XboxOne
             //    ContextUri = playlists.Items.First(s => s.Name == "30").Uri
             //});
-            sw.Stop();
-            Debug.WriteLine("SW: " + sw.ElapsedMilliseconds + " ms.");
 
             // do calls with Spotify and save token?
             SyncLights(lifxClient, spotify);
-
         }
 
         public static async Task<Bitmap> GetBitmapFromUrlAsync(string url)
@@ -143,7 +138,7 @@ namespace Housewarming2022
             {
                 //Get current track
                 CurrentlyPlaying currentTrack = await spotify.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(PlayerCurrentlyPlayingRequest.AdditionalTypes.Track));
-                if (runningTrack != null && (runningTrack.Item as FullTrack).Id == (currentTrack.Item as FullTrack).Id)
+                if (runningTrack != null && currentTrack != null && (runningTrack.Item as FullTrack).Id == (currentTrack.Item as FullTrack).Id)
                 {
                     Thread.Sleep(1000);
                     continue;
@@ -166,12 +161,12 @@ namespace Housewarming2022
                     Console.WriteLine("Album art retrieved in ms: " + sw.ElapsedMilliseconds);
 
                     // Lounge and TV strip lights should be based on top half of album art
-                    Console.WriteLine("Top :");
+                    Console.WriteLine("Top: ");
                     List<Color> topColours = GetTopPrimaryColours(albumArt);
                     tops.Add(imageURL, topColours);
 
                     // Kitchen, bench strip and dining room lights should be based on bottom half of album art
-                    Console.WriteLine("Bottom :");
+                    Console.WriteLine("Bottom: ");
                     var bottomColours = GetBottomPrimaryColours(albumArt);
                     bottoms.Add(imageURL, bottomColours);
                 }
@@ -223,7 +218,7 @@ namespace Housewarming2022
             }
 
             // Apply k-means clustering
-            KMeans kmeans = new KMeans(10);
+            KMeans kmeans = new KMeans(8);
             KMeansClusterCollection clusters = kmeans.Learn(pixelData);
 
             // Create a list to store colors and their vibrancy
@@ -247,7 +242,7 @@ namespace Housewarming2022
             vibrantColors = vibrantColors.OrderByDescending(c => c.Item2).ToList();
 
             // Take the top 6 most vibrant colors
-            List<Color> topVibrantColors = vibrantColors.Take(8).Select(c => c.Item1).ToList();
+            List<Color> topVibrantColors = vibrantColors.Take(7).Select(c => c.Item1).ToList();
 
             foreach (var color in topVibrantColors)
             {
@@ -285,6 +280,8 @@ namespace Housewarming2022
             int b = color.B;
 
             // Use ANSI escape codes to set the background color
+            Console.Write($"\x1b[48;2;{r};{g};{b}m  \x1b[0m");
+            Console.Write($"\x1b[48;2;{r};{g};{b}m  \x1b[0m");
             Console.Write($"\x1b[48;2;{r};{g};{b}m  \x1b[0m");
         }
     }
