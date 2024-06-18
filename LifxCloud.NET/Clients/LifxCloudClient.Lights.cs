@@ -78,11 +78,6 @@ namespace LifxCloud.NET
             return await PostResponseData<ApiResponse>($"{LightEndPoint}{selector}/effects/morph", request);
         }
 
-        public async Task<ApiResponse> FlameEffect(Selector selector, FlameEffectRequest request)
-        {
-            return await PostResponseData<ApiResponse>($"{LightEndPoint}{selector}/effects/flame", request);
-        }
-
         public async Task<ApiResponse> PulseEffect(Selector selector, PulseEffectRequest request)
         {
             return await PostResponseData<ApiResponse>($"{LightEndPoint}{selector}/effects/pulse", request);

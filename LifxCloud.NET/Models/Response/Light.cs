@@ -78,10 +78,6 @@ namespace LifxCloud.NET.Models
         public string LocationId { get { return location.id; } }
         public string LocationName { get { return location.name; } }
 
-        [JsonProperty("last_seen")]
-        [JsonConverter(typeof(IsoDateTimeConverter))]
-        public DateTime LastSeen { get; private set; }
-
         [JsonProperty("seconds_since_seen")]
         public float SecondsSinceSeen { get; private set; }
 
@@ -151,7 +147,6 @@ namespace LifxCloud.NET.Models
             Brightness = light.Brightness;
             group = light.group;
             location = light.location;
-            LastSeen = light.LastSeen;
             SecondsSinceSeen = light.SecondsSinceSeen;
             ProductName = light.ProductName;
         }

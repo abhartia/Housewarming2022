@@ -37,6 +37,9 @@ namespace Housewarming2022
             SpotifyClientID = configurationRoot["SpotifyClientID"];
             SpotifySecret = configurationRoot["SpotifySecret"];
 
+            SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
+            OAuthClient oAuthClient = new OAuthClient(config);
+
             bool activated = true;
             while (true)
             {
@@ -86,30 +89,33 @@ namespace Housewarming2022
 
         private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
         {
-            LifxCloudClient lifxClient = await LifxCloudClient.CreateAsync(LifxAppToken);
-            //List<Light> lights = await client.ListLights();
+            LifxCloudClient lifxClient = await CreateAsync(LifxAppToken);
 
             await _server.Stop();
 
             var config = SpotifyClientConfig.CreateDefault();
-            var tokenResponse = await new OAuthClient(config).RequestToken(
+            OAuthClient oAuthClient = new OAuthClient(config);
+            var tokenResponse = await oAuthClient.RequestToken(
               new AuthorizationCodeTokenRequest(
                 SpotifyClientID, SpotifySecret, response.Code, new Uri("http://localhost:5000/callback")
               )
             );
+            string SpotifyAccessToken = tokenResponse.AccessToken;
+            string SpotifyRefreshToken = tokenResponse.RefreshToken;
 
             SpotifyClient spotify = new SpotifyClient(tokenResponse.AccessToken);
+
             DeviceResponse devices = await spotify.Player.GetAvailableDevices();
             Paging<FullPlaylist> playlists = await spotify.Playlists.CurrentUsers();
 
-            //spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest()
-            //{
-            //    DeviceId = devices.Devices.First(s => s.Name == "BHUPENDRAJOGI").Id, //BHUPENDRAJOGI or XboxOne
-            //    ContextUri = playlists.Items.First(s => s.Name == "30").Uri
-            //});
+            spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest()
+            {
+                DeviceId = devices.Devices.First(s => s.Name == "XboxOne").Id, //BHUPENDRAJOGI or XboxOne
+                ContextUri = playlists.Items.First(s => s.Name == "30").Uri
+            });
 
             // do calls with Spotify and save token?
-            SyncLights(lifxClient, spotify);
+            SyncLights(lifxClient, spotify, oAuthClient, SpotifyRefreshToken);
         }
 
         public static async Task<Bitmap> GetBitmapFromUrlAsync(string url)
@@ -128,17 +134,34 @@ namespace Housewarming2022
             }
         }
 
-        static async void SyncLights(LifxCloudClient lifxClient, SpotifyClient spotify)
+        static async void SyncLights(LifxCloudClient lifxClient, SpotifyClient spotify, OAuthClient oAuthClient, string SpotifyRefreshToken)
         {
             Dictionary<string, List<Color>> tops = new Dictionary<string, List<Color>>();
             Dictionary<string, List<Color>> bottoms = new Dictionary<string, List<Color>>();
             CurrentlyPlaying runningTrack = null;
 
+            List<Light> lights = await lifxClient.ListLights();
+
             while (true)
             {
+                CurrentlyPlaying currentTrack = null;
                 //Get current track
-                CurrentlyPlaying currentTrack = await spotify.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(PlayerCurrentlyPlayingRequest.AdditionalTypes.Track));
-                if (runningTrack != null && currentTrack != null && (runningTrack.Item as FullTrack).Id == (currentTrack.Item as FullTrack).Id)
+                try
+                {
+                    currentTrack = await spotify.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest(PlayerCurrentlyPlayingRequest.AdditionalTypes.Track));
+
+                }
+                catch (Exception err)
+                {
+                    if (err.Message.ToLower().Contains("expired"))
+                    {
+                        var tokenResponse = await oAuthClient.RequestToken(new AuthorizationCodeRefreshRequest(SpotifyClientID, SpotifySecret, SpotifyRefreshToken));
+
+                        spotify = new SpotifyClient(tokenResponse.AccessToken);
+                    }
+                }
+
+                if (currentTrack == null || (runningTrack != null && (runningTrack.Item as FullTrack).Id == (currentTrack.Item as FullTrack).Id))
                 {
                     Thread.Sleep(1000);
                     continue;
@@ -158,32 +181,199 @@ namespace Housewarming2022
                 {
                     Bitmap albumArt = new Bitmap(await GetBitmapFromUrlAsync(imageURL), new Size(200, 200));
 
-                    Console.WriteLine("Album art retrieved in ms: " + sw.ElapsedMilliseconds);
-
                     // Lounge and TV strip lights should be based on top half of album art
-                    Console.WriteLine("Top: ");
-                    List<Color> topColours = GetTopPrimaryColours(albumArt);
+                    Task<List<Color>> t1 = GetTopPrimaryColoursAsync(albumArt);
+                    Task<List<Color>> t2 = GetBottomPrimaryColoursAsync(albumArt);
+                    List<Color> topColours = await t1;
                     tops.Add(imageURL, topColours);
 
                     // Kitchen, bench strip and dining room lights should be based on bottom half of album art
-                    Console.WriteLine("Bottom: ");
-                    var bottomColours = GetBottomPrimaryColours(albumArt);
+                    List<Color> bottomColours = await t2;
                     bottoms.Add(imageURL, bottomColours);
                 }
+                Console.WriteLine("Art processed in ms: " + sw.ElapsedMilliseconds);
+
+                //Set lights
+                string[] topColourStrings = new string[8];
+                string[] bottomColourStrings = new string[8];
+                for (int i = 0; i < 8; i++)
+                {
+                    // Length of tops and bottoms may be less than 8. If so, reiterate through the array
+                    topColourStrings[i] = tops[imageURL][i % tops[imageURL].Count].ToArgb().ToString("X8").Substring(2);
+                    bottomColourStrings[i] = bottoms[imageURL][i % bottoms[imageURL].Count].ToArgb().ToString("X8").Substring(2);
+                }
+
+                double targetBrightness = Math.Max(0.6, Math.Min(0.6 + (DateTime.Now.Hour - 16) * 0.2, 1));
+                double duration = 1;
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "TV Backlight").Id + "|2-5"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[0],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "TV Backlight").Id + "|0-1"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[1],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "TV Backlight").Id + "|6-7"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[2],
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downlight TV Corner").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[0],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downlight Entrance").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[1],
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|13-15"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[0],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|10-12"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[1],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|8-9"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[2],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|6-7"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[3],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|4-5"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[4],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|2-3"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[5],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|0-1"), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[6],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downstairs 6").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[2],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downstairs 5").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[3],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Kitchen 2").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = topColourStrings[4],
+                    Duration = duration,
+                    Fast = true
+                });
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Corridor").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = tops[imageURL].Last().ToArgb().ToString("X8").Substring(2),
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downstairs 4").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = bottomColourStrings[0],
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downstairs 3").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = bottomColourStrings[1],
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Kitchen 1").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = bottomColourStrings[2],
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downstairs 1").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = bottomColourStrings[3],
+                    Duration = duration,
+                    Fast = true
+                });
+
+                lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Downstairs 2").Id), new SetStateRequest()
+                {
+                    Brightness = targetBrightness,
+                    Color = bottomColourStrings[4],
+                    Duration = duration,
+                    Fast = true
+                });
             }
         }
 
-        public static List<Color> GetTopPrimaryColours(Bitmap bitmap)
+        public static async Task<List<Color>> GetTopPrimaryColoursAsync(Bitmap bitmap)
         {
-            return GetPrimaryColours(bitmap, true);
+            return await GetPrimaryColours(bitmap, true);
         }
 
-        public static List<Color> GetBottomPrimaryColours(Bitmap bitmap)
+        public static async Task<List<Color>> GetBottomPrimaryColoursAsync(Bitmap bitmap)
         {
-            return GetPrimaryColours(bitmap, false);
+            return await GetPrimaryColours(bitmap, false);
         }
 
-        private static List<Color> GetPrimaryColours(Bitmap bitmap, bool top)
+        private static async Task<List<Color>> GetPrimaryColours(Bitmap bitmap, bool top)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -224,7 +414,7 @@ namespace Housewarming2022
             // Create a list to store colors and their vibrancy
             List<Tuple<Color, double>> vibrantColors = new List<Tuple<Color, double>>();
 
-            foreach (var cluster in clusters.Where(s => s.Proportion > 0.045))
+            foreach (var cluster in clusters.Where(s => s.Proportion > 0.03))
             {
                 var color = Color.FromArgb(
                     (int)(cluster.Centroid[0] * 255),
@@ -242,7 +432,15 @@ namespace Housewarming2022
             vibrantColors = vibrantColors.OrderByDescending(c => c.Item2).ToList();
 
             // Take the top 6 most vibrant colors
-            List<Color> topVibrantColors = vibrantColors.Take(7).Select(c => c.Item1).ToList();
+            List<Color> topVibrantColors = vibrantColors.Take(8).Select(c => c.Item1).ToList();
+            if (top)
+            {
+                Console.WriteLine("Top colors:");
+            }
+            else
+            {
+                Console.WriteLine("Bottom colors:");
+            }
 
             foreach (var color in topVibrantColors)
             {
@@ -250,7 +448,6 @@ namespace Housewarming2022
                 Console.WriteLine();
             }
 
-            Console.WriteLine("Found in ms: " + sw.ElapsedMilliseconds);
             Console.WriteLine();
 
             // Return the top 6 most vibrant colors

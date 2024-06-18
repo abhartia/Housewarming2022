@@ -2,7 +2,6 @@
 using LifxCloud.NET.Models;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -114,24 +113,26 @@ namespace LifxCloud.NET
 
         internal static async Task<object> GetResponseData<T>(String url)
         {
-            return await await ResilientCall(async () =>
-            {
-                var response = await Client.GetAsync(url);
+            Func<Task<object>> block = async () =>
+                                    {
+                                        var response = await Client.GetAsync(url);
 
-                var result = await response.Content.ReadAsStringAsync();
-                object resource;
+                                        var result = await response.Content.ReadAsStringAsync();
+                                        object resource;
 
-                if (result.Contains("error"))
-                {
-                    resource = JsonConvert.DeserializeObject<ErrorResponse>(result);
-                }
-                else
-                {
-                    resource = JsonConvert.DeserializeObject<T>(result);
-                }
+                                        if (result.Contains("error"))
+                                        {
+                                            resource = JsonConvert.DeserializeObject<ErrorResponse>(result);
+                                        }
+                                        else
+                                        {
+                                            resource = JsonConvert.DeserializeObject<T>(result);
+                                        }
 
-                return resource;
-            });
+                                        return resource;
+                                    };
+            Task<object> task = await ResilientCall(block);
+            return await task;
         }
 
         async static Task<T> ResilientCall<T>(Func<T> block)
