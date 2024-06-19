@@ -107,12 +107,18 @@ namespace Housewarming2022
 
             DeviceResponse devices = await spotify.Player.GetAvailableDevices();
             Paging<FullPlaylist> playlists = await spotify.Playlists.CurrentUsers();
-
-            spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest()
+            try
             {
-                DeviceId = devices.Devices.First(s => s.Name == "XboxOne").Id, //BHUPENDRAJOGI or XboxOne
-                ContextUri = playlists.Items.First(s => s.Name == "30").Uri
-            });
+                spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest()
+                {
+                    DeviceId = devices.Devices.First(s => s.Name == "XboxOne").Id, //BHUPENDRAJOGI or XboxOne
+                    ContextUri = playlists.Items.First(s => s.Name == "30").Uri
+                });
+            }
+            catch (Exception err)
+            {
+                Debug.WriteLine(err.ToString());
+            }
 
             // do calls with Spotify and save token?
             SyncLights(lifxClient, spotify, oAuthClient, SpotifyRefreshToken);
@@ -246,49 +252,49 @@ namespace Housewarming2022
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|13-15"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[0],
+                    Color = bottomColourStrings[0],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|10-12"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[1],
+                    Color = bottomColourStrings[1],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|8-9"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[2],
+                    Color = bottomColourStrings[2],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|6-7"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[3],
+                    Color = bottomColourStrings[3],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|4-5"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[4],
+                    Color = bottomColourStrings[4],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|2-3"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[5],
+                    Color = bottomColourStrings[5],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|0-1"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = topColourStrings[6],
+                    Color = bottomColourStrings[6],
                     Duration = duration,
                     Fast = true
                 });
@@ -414,7 +420,7 @@ namespace Housewarming2022
             // Create a list to store colors and their vibrancy
             List<Tuple<Color, double>> vibrantColors = new List<Tuple<Color, double>>();
 
-            foreach (var cluster in clusters.Where(s => s.Proportion > 0.03))
+            foreach (var cluster in clusters.Where(s => s.Proportion > 0.038))
             {
                 var color = Color.FromArgb(
                     (int)(cluster.Centroid[0] * 255),
