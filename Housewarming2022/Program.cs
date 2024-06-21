@@ -144,6 +144,7 @@ namespace Housewarming2022
         {
             Dictionary<string, List<Color>> tops = new Dictionary<string, List<Color>>();
             Dictionary<string, List<Color>> bottoms = new Dictionary<string, List<Color>>();
+            Dictionary<string, List<Color>> benchstrips = new Dictionary<string, List<Color>>();
             CurrentlyPlaying runningTrack = null;
 
             List<Light> lights = await lifxClient.ListLights();
@@ -179,6 +180,9 @@ namespace Housewarming2022
                 //Get album art
                 string imageURL = (runningTrack.Item as FullTrack).Album.Images.First().Url;
 
+                //Get artist art
+                string bottomImageURL = artist.Images.Count > 0 ? artist.Images.First().Url : imageURL;
+
                 //Get album art bitmap
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
@@ -197,16 +201,29 @@ namespace Housewarming2022
                     List<Color> bottomColours = await t2;
                     bottoms.Add(imageURL, bottomColours);
                 }
+                if (!benchstrips.ContainsKey(bottomImageURL))
+                {
+                    Bitmap artistArt = new Bitmap(await GetBitmapFromUrlAsync(bottomImageURL), new Size(200, 200));
+
+                    // Lounge and TV strip lights should be based on top half of album art
+                    Task<List<Color>> t2 = GetBottomPrimaryColoursAsync(artistArt);
+
+                    // Kitchen, bench strip and dining room lights should be based on bottom half of album art
+                    List<Color> bottomArtistColours = await t2;
+                    benchstrips.Add(bottomImageURL, bottomArtistColours);
+                }
                 Console.WriteLine("Art processed in ms: " + sw.ElapsedMilliseconds);
 
                 //Set lights
                 string[] topColourStrings = new string[8];
                 string[] bottomColourStrings = new string[8];
+                string[] bottomArtistColourStrings = new string[8];
                 for (int i = 0; i < 8; i++)
                 {
                     // Length of tops and bottoms may be less than 8. If so, reiterate through the array
                     topColourStrings[i] = tops[imageURL][i % tops[imageURL].Count].ToArgb().ToString("X8").Substring(2);
                     bottomColourStrings[i] = bottoms[imageURL][i % bottoms[imageURL].Count].ToArgb().ToString("X8").Substring(2);
+                    bottomArtistColourStrings[i] = benchstrips[bottomImageURL][i % benchstrips[bottomImageURL].Count].ToArgb().ToString("X8").Substring(2);
                 }
 
                 double targetBrightness = Math.Max(0.6, Math.Min(0.6 + (DateTime.Now.Hour - 16) * 0.2, 1));
@@ -280,21 +297,21 @@ namespace Housewarming2022
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|4-5"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = bottomColourStrings[4],
+                    Color = bottomArtistColourStrings[2],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|2-3"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = bottomColourStrings[5],
+                    Color = bottomArtistColourStrings[1],
                     Duration = duration,
                     Fast = true
                 });
                 lifxClient.SetState(new Selector.LightLabel(lights.First(s => s.Label == "Bench Light").Id + "|0-1"), new SetStateRequest()
                 {
                     Brightness = targetBrightness,
-                    Color = bottomColourStrings[6],
+                    Color = bottomArtistColourStrings[0],
                     Duration = duration,
                     Fast = true
                 });
