@@ -40,23 +40,14 @@ namespace Housewarming2022
             SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
             OAuthClient oAuthClient = new OAuthClient(config);
 
-            bool activated = true;
-            while (true)
+            _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+            await _server.Start();
+
+            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+
+            var request = new LoginRequest(_server.BaseUri, SpotifyClientID, LoginRequest.ResponseType.Code)
             {
-                //if (DateTime.Now.Hour == 16 && DateTime.Now.Minute == 0)
-                //{
-                //    activated = true;
-                //}
-                if (activated)
-                {
-                    _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
-                    await _server.Start();
-
-                    _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-
-                    var request = new LoginRequest(_server.BaseUri, SpotifyClientID, LoginRequest.ResponseType.Code)
-                    {
-                        Scope = new List<string> {
+                Scope = new List<string> {
                             Scopes.UgcImageUpload,
                             Scopes.UserReadRecentlyPlayed ,
                             Scopes.UserReadPlaybackPosition,
@@ -77,14 +68,11 @@ namespace Housewarming2022
                             Scopes.PlaylistReadCollaborative ,
                             Scopes.UserFollowModify
                         }
-                    };
-                    var uri = request.ToUri();
-                    BrowserUtil.Open(uri);
+            };
+            var uri = request.ToUri();
+            BrowserUtil.Open(uri);
 
-                    Thread.Sleep(99930000);
-                }
-                Thread.Sleep(60000);
-            }
+            Thread.Sleep(99930000);
         }
 
         private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
